@@ -1,24 +1,21 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
-```{r echo=TRUE}
+
+```r
 activityData <- read.csv('activity/activity.csv', na.strings = "NA")
 ```
 
 
 ## What is mean total number of steps taken per day?
-```{r echo=TRUE}
+
+```r
 activityDataByDay <- aggregate(activityData$steps, by=list(date = activityData$date), 
                                FUN=sum, na.rm = TRUE)
 colnames(activityDataByDay)[2] <- 'steps'
 
-hist(activityDataByDay$steps, main = "Histogram of the Mean Steps by Day", xlab='Number of Steps')
+hist(activityDataByDay$steps, main = "Histogram of the Mean Steps by Day", xlab='Steps')
 legend("topright", c("mean", "median"), col=c("blue", "red"), lwd=2, lty=c(1,2))
 
 meanStepsPerDay <- mean(activityDataByDay$steps, na.rm = TRUE)
@@ -32,10 +29,13 @@ text(15, x=medianStepsPerDay, pos = 4, offset = 0.1, col = "red",
      paste('median = ', format(medianStepsPerDay, digits = 7)))
 ```
 
-The mean is `r format(meanStepsPerDay, digits = 7)` and the median is `r format(medianStepsPerDay, digits = 7)`.
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+
+The mean is 9354.23 and the median is 10395.
 
 ## What is the average daily activity pattern?
-```{r}
+
+```r
 activityDataByInterval <- aggregate(activityData$steps, 
                                     by=list(interval = activityData$interval), 
                                     FUN=mean, na.rm = TRUE)
@@ -46,24 +46,47 @@ maxIntervalStepsIdx <- which.max(activityDataByInterval$steps)
 maxInterval <- activityDataByInterval$interval[maxIntervalStepsIdx]
 
 plot(x = activityDataByInterval$interval, y = activityDataByInterval$steps, type="l",
-      main = "Average Daily Activity", xlab = "Interval", ylab = "Number of Steps")
+      main = "Average Daily Activity", xlab = "Interval", ylab = "Steps")
 abline(v = maxInterval, col = "blue", lwd = 2)
 text(maxIntervalSteps, x=maxInterval, pos = 4, offset = 0.25, col = "blue",
      paste('max steps interval = ', format(maxInterval, digits = 7)))
 ```
 
-The max number of steps is `r format(maxIntervalSteps, digits = 5)` at interval, `r maxInterval`.
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+
+The max number of steps is 206.17 at interval, 835.
 
 ## Imputing missing values
 Number of rows with missing values:
-```{r}
+
+```r
 length(is.na(activityData$steps))
 ```
 
-Replace NA values with average daily interval values.
-```{r}
-library(dplyr)
+```
+## [1] 17568
+```
 
+Replace NA values with average daily interval values.
+
+```r
+library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 activityDataByInterval <- aggregate(activityData$steps, 
                                     by=list(interval = activityData$interval), 
                                     FUN=mean, na.rm = TRUE)
@@ -74,7 +97,8 @@ activityData2 <- mutate(activityData2, imputedSteps = ifelse(is.na(steps), meanS
 ```
 
 Plot histogram.
-```{r}
+
+```r
 activityDataByDay2 <- aggregate(activityData2$imputedSteps, 
                                by=list(date = activityData2$date), 
                                FUN=sum)
@@ -94,11 +118,21 @@ text(15, x=medianStepsPerDay, pos = 4, offset = 0.1, col = "red",
      paste('median = ', format(medianStepsPerDay, digits = 7)))
 ```
 
-The mean is `r format(meanStepsPerDay, digits = 7)` and the median is `r format(medianStepsPerDay, digits = 7)`. The main difference between the Imputed data and the data with "NA" omitted is that mean and median for the Imputed data is the same.  
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
+
+The mean is 10766.19 and the median is 10766.19. The main difference between the Imputed data and the data with "NA" omitted is that mean and median for the Imputed data is the same.  
 
 ## Are there differences in activity patterns between weekdays and weekends?
-```{r}
+
+```r
 library(lubridate)
+```
+
+```
+## Warning: package 'lubridate' was built under R version 3.2.1
+```
+
+```r
 isWeekday <- function(d) {
   day <- weekdays(as.Date(d, format="%Y-%m-%d"))
 
@@ -116,3 +150,5 @@ xyplot(activityData2$imputedSteps~activityData2$interval|activityData2$dayType,
    ylab="Number of Steps", xlab="Interval", type="l",
    layout = c(1,2))
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
