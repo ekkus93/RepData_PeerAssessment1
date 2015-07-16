@@ -7,8 +7,24 @@ output:
 
 
 ## Loading and preprocessing the data
+Load the data and add a new column called intervalTime. intervalTime is cleaned version
+of interval.
 ```{r echo=TRUE}
+ORIGIN = "2015-10-21"
+TZ = "UTC"
 activityData <- read.csv('activity/activity.csv', na.strings = "NA")
+
+setIntervalTime <- function(row) {
+  totalMinutes <- as.integer(row[3])
+  hours <- totalMinutes %/% 100
+  minutes <- totalMinutes %% 60
+  
+  timeStr <- sprintf("%02d:%02d", hours, minutes) 
+  intervalTime_lt <- strptime(timeStr, "%H:%M")
+  return(as.POSIXct(intervalTime_lt, origin = ORIGIN, tz = TZ))
+}
+
+activityData$intervalTime <- apply(activityData, 1, setIntervalTime)
 ```
 
 
@@ -24,12 +40,12 @@ legend("topright", c("mean", "median"), col=c("blue", "red"), lwd=2, lty=c(1,2))
 meanStepsPerDay <- mean(activityDataByDay$steps, na.rm = TRUE)
 abline(v = meanStepsPerDay, col = "blue", lwd = 2)
 text(20, x=meanStepsPerDay, pos = 2, offset = 0.1, col = "blue",
-     paste('mean = ', format(meanStepsPerDay, digits = 7)))
+     paste('mean = ', format(round(meanStepsPerDay, 2), nsmall = 2)))
 
 medianStepsPerDay <- median(activityDataByDay$steps, na.rm = TRUE)
 abline(v = medianStepsPerDay, col = "red", lwd = 2, lty=2)
 text(15, x=medianStepsPerDay, pos = 4, offset = 0.1, col = "red",
-     paste('median = ', format(medianStepsPerDay, digits = 7)))
+     paste('median = ', format(round(medianStepsPerDay, 2), nsmall = 2)))
 ```
 
 The mean is `r format(meanStepsPerDay, digits = 7)` and the median is `r format(medianStepsPerDay, digits = 7)`.
@@ -37,22 +53,32 @@ The mean is `r format(meanStepsPerDay, digits = 7)` and the median is `r format(
 ## What is the average daily activity pattern?
 ```{r}
 activityDataByInterval <- aggregate(activityData$steps, 
-                                    by=list(interval = activityData$interval), 
+                                    by=list(intervalTime = activityData$intervalTime), 
                                     FUN=mean, na.rm = TRUE)
 colnames(activityDataByInterval)[2] <- 'steps'
 
 maxIntervalSteps <- max(activityDataByInterval$steps)
 maxIntervalStepsIdx <- which.max(activityDataByInterval$steps) 
-maxInterval <- activityDataByInterval$interval[maxIntervalStepsIdx]
+maxIntervalTime <- activityDataByInterval$intervalTime[maxIntervalStepsIdx]
+maxIntervalStr <- sprintf("%s", format(as.POSIXct(maxIntervalTime, 
+                                            origin = ORIGIN, tz = TZ), "%H:%M"))
 
-plot(x = activityDataByInterval$interval, y = activityDataByInterval$steps, type="l",
-      main = "Average Daily Activity", xlab = "Interval", ylab = "Number of Steps")
-abline(v = maxInterval, col = "blue", lwd = 2)
-text(maxIntervalSteps, x=maxInterval, pos = 4, offset = 0.25, col = "blue",
-     paste('max steps interval = ', format(maxInterval, digits = 7)))
+plot(x = activityDataByInterval$intervalTime, 
+     y = activityDataByInterval$steps, type="l", xaxt="n",
+    main = "Average Daily Activity", xlab = "Interval", ylab = "Number of Steps")
+
+xaxis <- activityDataByInterval$intervalTime[seq(1, 
+                                                 length(activityDataByInterval$intervalTime), 20)]
+axis(1, at=xaxis,
+     labels=sprintf("%s", format(as.POSIXct(xaxis, 
+                                            origin = ORIGIN, tz = TZ), "%H:%M")))
+
+abline(v = maxIntervalTime, col = "blue", lwd = 2)
+text(maxIntervalSteps, x=maxIntervalTime, pos = 4, offset = 0.25, col = "blue",
+     paste('max steps interval = ', maxIntervalStr))
 ```
 
-The max number of steps is `r format(maxIntervalSteps, digits = 5)` at interval, `r maxInterval`.
+The maximum number of steps is `r format(round(maxIntervalSteps, 2), nsmall = 2)` at interval, `r maxIntervalStr`.
 
 ## Imputing missing values
 Number of rows with missing values:
@@ -65,11 +91,11 @@ Replace NA values with average daily interval values.
 library(dplyr)
 
 activityDataByInterval <- aggregate(activityData$steps, 
-                                    by=list(interval = activityData$interval), 
+                                    by=list(intervalTime = activityData$intervalTime), 
                                     FUN=mean, na.rm = TRUE)
 colnames(activityDataByInterval)[2] <- 'meanSteps'
 
-activityData2 <- merge(activityData, activityDataByInterval, by="interval")
+activityData2 <- merge(activityData, activityDataByInterval, by="intervalTime")
 activityData2 <- mutate(activityData2, imputedSteps = ifelse(is.na(steps), meanSteps, steps))
 ```
 
@@ -98,7 +124,6 @@ The mean is `r format(meanStepsPerDay, digits = 7)` and the median is `r format(
 
 ## Are there differences in activity patterns between weekdays and weekends?
 ```{r}
-library(lubridate)
 isWeekday <- function(d) {
   day <- weekdays(as.Date(d, format="%Y-%m-%d"))
 
@@ -110,9 +135,34 @@ isWeekday <- function(d) {
 }
 
 activityData2$dayType = sapply(activityData$date, isWeekday)
+activityData2ByInterval <- aggregate(activityData2$meanSteps, 
+                                    by=list(intervalTime = activityData2$intervalTime,
+                                            dayType = activityData2$dayType), 
+                                    FUN=mean, na.rm = TRUE)
+colnames(activityData2ByInterval)[3] <- 'imputedSteps'
 
 library(lattice) 
-xyplot(activityData2$imputedSteps~activityData2$interval|activityData2$dayType, 
-   ylab="Number of Steps", xlab="Interval", type="l",
-   layout = c(1,2))
+                                                50)]
+minIntervalTime = min(activityData2ByInterval$intervalTime)
+medianIntervalTime = median(activityData2ByInterval$intervalTime)
+maxIntervalTime = max(activityData2ByInterval$intervalTime)
+intervalTime1 = (minIntervalTime + medianIntervalTime) %/% 2
+intervalTime2 = (medianIntervalTime + maxIntervalTime) %/% 2
+xaxis <- c(minIntervalTime, intervalTime1, medianIntervalTime, 
+           intervalTime1, intervalTime2, maxIntervalTime) 
+
+xaxisFormatted <- sprintf("%s", format(as.POSIXct(xaxis, 
+                                            origin = ORIGIN, tz = TZ), "%H:%M"))
+                          
+scales <-list(
+     x = list(
+            at = xaxis,
+            labels = xaxisFormatted))                            
+
+xyplot(activityData2ByInterval$imputedSteps ~
+         activityData2ByInterval$intervalTime|activityData2ByInterval$dayType, 
+   ylab="Number of Steps", xlab="Interval", type="l", layout = c(1,2)
+   ,
+   scales = scales
+   )
 ```
