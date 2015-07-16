@@ -31,12 +31,14 @@ activityDataByDay <- aggregate(activityData$steps, by=list(date = activityData$d
                                FUN=sum, na.rm = TRUE)
 colnames(activityDataByDay)[2] <- 'steps'
 
-hist(activityDataByDay$steps, main = "Histogram of the Mean Steps by Day", xlab='Number of Steps')
+hist(activityDataByDay$steps, breaks=11,
+     main = "Histogram of the Mean Steps by Day", 
+     xlab='Number of Steps')
 legend("topright", c("mean", "median"), col=c("blue", "red"), lwd=2, lty=c(1,2))
 
 meanStepsPerDay <- mean(activityDataByDay$steps, na.rm = TRUE)
 abline(v = meanStepsPerDay, col = "blue", lwd = 2)
-text(20, x=meanStepsPerDay, pos = 2, offset = 0.1, col = "blue",
+text(10, x=meanStepsPerDay, pos = 2, offset = 0.1, col = "blue",
      paste('mean = ', format(round(meanStepsPerDay, 2), nsmall = 2)))
 
 medianStepsPerDay <- median(activityDataByDay$steps, na.rm = TRUE)
@@ -73,8 +75,8 @@ axis(1, at=xaxis,
      labels=sprintf("%s", format(as.POSIXct(xaxis, 
                                             origin = ORIGIN, tz = TZ), "%H:%M")))
 
-abline(v = maxIntervalTime, col = "blue", lwd = 2)
-text(maxIntervalSteps, x=maxIntervalTime, pos = 4, offset = 0.25, col = "blue",
+abline(v = maxIntervalTime, col = "red", lwd = 1, lty = 2)
+text(maxIntervalSteps, x=maxIntervalTime, pos = 4, offset = 0.25, col = "red",
      paste('max steps interval = ', maxIntervalStr))
 ```
 
@@ -93,7 +95,7 @@ length(is.na(activityData$steps))
 ## [1] 17568
 ```
 
-Replace NA values with average daily interval values.
+Replace NA values with average values for an interval for each day.
 
 ```r
 library(dplyr)
@@ -130,7 +132,8 @@ activityDataByDay2 <- aggregate(activityData2$imputedSteps,
                                FUN=sum)
 colnames(activityDataByDay2)[2] <- 'steps'
 
-hist(activityDataByDay2$steps, main = "Histogram of the Mean (Imputed) Steps by Day", xlab='Steps')
+hist(activityDataByDay2$steps, breaks = 11,
+     main = "Histogram of the Mean (Imputed) Steps by Day", xlab='Steps')
 legend("topright", c("mean", "median"), col=c("blue", "red"), lwd=2, lty=c(1,2))
 
 meanStepsPerDay <- mean(activityDataByDay2$steps)
@@ -149,6 +152,7 @@ text(15, x=medianStepsPerDay, pos = 4, offset = 0.1, col = "red",
 The mean is 10766.19 and the median is 10766.19. The main difference between the Imputed data and the data with "NA" omitted is that mean and median for the Imputed data is the same.  
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Separate data for weekdays and weekends.
 
 ```r
 isWeekday <- function(d) {
@@ -162,10 +166,26 @@ isWeekday <- function(d) {
 }
 
 activityData2$dayType = sapply(activityData$date, isWeekday)
+activityData2ByInterval <- aggregate(activityData2$meanSteps, 
+                                    by=list(intervalTime = activityData2$intervalTime,
+                                            dayType = activityData2$dayType), 
+                                    FUN=mean, na.rm = TRUE)
+colnames(activityData2ByInterval)[3] <- 'imputedSteps'
+```
 
+Plot time series plot.
+
+```r
 library(lattice) 
+                                                
+minIntervalTime = min(activityData2ByInterval$intervalTime)
+medianIntervalTime = median(activityData2ByInterval$intervalTime)
+maxIntervalTime = max(activityData2ByInterval$intervalTime)
+intervalTime1 = (minIntervalTime + medianIntervalTime) %/% 2
+intervalTime2 = (medianIntervalTime + maxIntervalTime) %/% 2
+xaxis <- c(minIntervalTime, intervalTime1, medianIntervalTime, 
+           intervalTime1, intervalTime2, maxIntervalTime) 
 
-xaxis <- activityData2$intervalTime[seq(1, length(activityData2$intervalTime), 2110)]
 xaxisFormatted <- sprintf("%s", format(as.POSIXct(xaxis, 
                                             origin = ORIGIN, tz = TZ), "%H:%M"))
                           
@@ -174,11 +194,12 @@ scales <-list(
             at = xaxis,
             labels = xaxisFormatted))                            
 
-xyplot(activityData2$imputedSteps~activityData2$intervalTime|activityData2$dayType, 
+xyplot(activityData2ByInterval$imputedSteps ~
+         activityData2ByInterval$intervalTime|activityData2ByInterval$dayType, 
    ylab="Number of Steps", xlab="Interval", type="l", layout = c(1,2)
    ,
    scales = scales
    )
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-8-1.png) 

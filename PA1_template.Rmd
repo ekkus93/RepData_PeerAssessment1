@@ -34,12 +34,14 @@ activityDataByDay <- aggregate(activityData$steps, by=list(date = activityData$d
                                FUN=sum, na.rm = TRUE)
 colnames(activityDataByDay)[2] <- 'steps'
 
-hist(activityDataByDay$steps, main = "Histogram of the Mean Steps by Day", xlab='Number of Steps')
+hist(activityDataByDay$steps, breaks=11,
+     main = "Histogram of the Mean Steps by Day", 
+     xlab='Number of Steps')
 legend("topright", c("mean", "median"), col=c("blue", "red"), lwd=2, lty=c(1,2))
 
 meanStepsPerDay <- mean(activityDataByDay$steps, na.rm = TRUE)
 abline(v = meanStepsPerDay, col = "blue", lwd = 2)
-text(20, x=meanStepsPerDay, pos = 2, offset = 0.1, col = "blue",
+text(10, x=meanStepsPerDay, pos = 2, offset = 0.1, col = "blue",
      paste('mean = ', format(round(meanStepsPerDay, 2), nsmall = 2)))
 
 medianStepsPerDay <- median(activityDataByDay$steps, na.rm = TRUE)
@@ -73,8 +75,8 @@ axis(1, at=xaxis,
      labels=sprintf("%s", format(as.POSIXct(xaxis, 
                                             origin = ORIGIN, tz = TZ), "%H:%M")))
 
-abline(v = maxIntervalTime, col = "blue", lwd = 2)
-text(maxIntervalSteps, x=maxIntervalTime, pos = 4, offset = 0.25, col = "blue",
+abline(v = maxIntervalTime, col = "red", lwd = 1, lty = 2)
+text(maxIntervalSteps, x=maxIntervalTime, pos = 4, offset = 0.25, col = "red",
      paste('max steps interval = ', maxIntervalStr))
 ```
 
@@ -86,7 +88,7 @@ Number of rows with missing values:
 length(is.na(activityData$steps))
 ```
 
-Replace NA values with average daily interval values.
+Replace NA values with average values for an interval for each day.
 ```{r}
 library(dplyr)
 
@@ -106,7 +108,8 @@ activityDataByDay2 <- aggregate(activityData2$imputedSteps,
                                FUN=sum)
 colnames(activityDataByDay2)[2] <- 'steps'
 
-hist(activityDataByDay2$steps, main = "Histogram of the Mean (Imputed) Steps by Day", xlab='Steps')
+hist(activityDataByDay2$steps, breaks = 11,
+     main = "Histogram of the Mean (Imputed) Steps by Day", xlab='Steps')
 legend("topright", c("mean", "median"), col=c("blue", "red"), lwd=2, lty=c(1,2))
 
 meanStepsPerDay <- mean(activityDataByDay2$steps)
@@ -123,6 +126,7 @@ text(15, x=medianStepsPerDay, pos = 4, offset = 0.1, col = "red",
 The mean is `r format(meanStepsPerDay, digits = 7)` and the median is `r format(medianStepsPerDay, digits = 7)`. The main difference between the Imputed data and the data with "NA" omitted is that mean and median for the Imputed data is the same.  
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Separate data for weekdays and weekends.
 ```{r}
 isWeekday <- function(d) {
   day <- weekdays(as.Date(d, format="%Y-%m-%d"))
@@ -140,9 +144,12 @@ activityData2ByInterval <- aggregate(activityData2$meanSteps,
                                             dayType = activityData2$dayType), 
                                     FUN=mean, na.rm = TRUE)
 colnames(activityData2ByInterval)[3] <- 'imputedSteps'
+```
 
+Plot time series plot.
+```{r}
 library(lattice) 
-                                                50)]
+                                                
 minIntervalTime = min(activityData2ByInterval$intervalTime)
 medianIntervalTime = median(activityData2ByInterval$intervalTime)
 maxIntervalTime = max(activityData2ByInterval$intervalTime)
