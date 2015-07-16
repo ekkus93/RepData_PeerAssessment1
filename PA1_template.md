@@ -179,12 +179,9 @@ Plot time series plot.
 library(lattice) 
                                                 
 minIntervalTime = min(activityData2ByInterval$intervalTime)
-medianIntervalTime = median(activityData2ByInterval$intervalTime)
 maxIntervalTime = max(activityData2ByInterval$intervalTime)
-intervalTime1 = (minIntervalTime + medianIntervalTime) %/% 2
-intervalTime2 = (medianIntervalTime + maxIntervalTime) %/% 2
-xaxis <- c(minIntervalTime, intervalTime1, medianIntervalTime, 
-           intervalTime1, intervalTime2, maxIntervalTime) 
+xaxis <- seq(minIntervalTime, maxIntervalTime, 
+             by = (maxIntervalTime - minIntervalTime) %/% 7)
 
 xaxisFormatted <- sprintf("%s", format(as.POSIXct(xaxis, 
                                             origin = ORIGIN, tz = TZ), "%H:%M"))
